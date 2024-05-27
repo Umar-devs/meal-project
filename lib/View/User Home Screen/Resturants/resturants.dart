@@ -17,12 +17,14 @@ class ResturantHome extends StatefulWidget {
 
 class _ResturantHomeState extends State<ResturantHome> {
   final List<String> categories = [
+    'All',
     'Fast Food',
     'Desi Food',
     'Bakery',
     'Snacks',
   ];
   final List assetNames = [
+    'Assets/images/all.png',
     'Assets/images/fast food (2).png',
     'Assets/images/desi_food.png',
     'Assets/images/bakery.png',
@@ -80,6 +82,7 @@ class _ResturantHomeState extends State<ResturantHome> {
   }
 
   Placemark? _placemark;
+
   @override
   void initState() {
     super.initState();
@@ -90,6 +93,14 @@ class _ResturantHomeState extends State<ResturantHome> {
         });
       });
     });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchResturants() async {
+    QuerySnapshot querySnapshot =
+        await FirebaseFirestore.instance.collection('Resturants').get();
+    return querySnapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
   }
 
   int selectedIndex = 0;
@@ -128,74 +139,179 @@ class _ResturantHomeState extends State<ResturantHome> {
                     //Categories text row
                     CategoriesTxtRow(mq: mq),
                     // Categories Circles
-                    CategoriesCirclesWithTitles(
-                        mq: mq,
-                        assetNames: assetNames,
-                        categories: categories,
-                        ind: selectedIndex),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 30),
+                      child: SizedBox(
+                        height: mq.height * 0.135,
+                        width: mq.width,
+                        child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemBuilder: (context, index) {
+                              return GestureDetector(
+                                onTap: () => setState(() {
+                                  selectedIndex = index;
+                                }),
+                                child: Column(
+                                  children: [
+                                    Container(
+                                      height:
+                                          MediaQuery.of(context).size.height *
+                                              0.1,
+                                      width: selectedIndex == index
+                                          ? MediaQuery.of(context).size.width *
+                                              0.2
+                                          : MediaQuery.of(context).size.width *
+                                              0.19,
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(
+                                            255, 245, 163, 190),
+                                        border: Border.all(
+                                            color: selectedIndex == index
+                                                ? Colors.red
+                                                : Colors.transparent,
+                                            width: 2),
+                                        image: DecorationImage(
+                                            image:
+                                                AssetImage(assetNames[index]),
+                                            fit: BoxFit.cover),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(
+                                      height: 5,
+                                    ),
+                                    Text(
+                                      categories[index],
+                                      style: TextStyle(
+                                          color: Colors.black,
+                                          fontSize:
+                                              selectedIndex == index ? 13 : 12,
+                                          fontWeight: selectedIndex == index
+                                              ? FontWeight.bold
+                                              : FontWeight.w500),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            separatorBuilder: (context, index) {
+                              return const SizedBox(
+                                width: 15,
+                              );
+                            },
+                            itemCount: categories.length),
+                      ),
+                    ),
 
                     //Resturants text row
                     ResturantsRow(mq: mq),
                     // Resturants Boxes
-                    Padding(
-                      padding:
-                          const EdgeInsets.only(top: 30, left: 5, right: 5),
-                      child: SizedBox(
-                          height: mq.height * 0.5,
-                          width: mq.width,
-                          child: GridView.count(
-                            physics: const BouncingScrollPhysics(),
-                            crossAxisCount: 2,
-                            children: List.generate(10, (index) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const DealsScreen()));
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black12,
-                                          offset: Offset(2, 2),
-                                          blurRadius: 4,
-                                          spreadRadius: 1,
-                                        )
-                                      ]),
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 10),
-                                  child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                    return Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Container(
-                                            height:
-                                                constraints.maxHeight * 0.75,
-                                            width: constraints.maxWidth,
-                                            decoration: const BoxDecoration(
-                                                image: DecorationImage(
-                                                    image: AssetImage(
-                                                        'Assets/images/resturant logo.jpg'),
-                                                    fit: BoxFit.fill))),
-                                        const Text('Resturant Name'),
-                                        SizedBox(
-                                          height: constraints.maxHeight * 0.001,
-                                        )
-                                      ],
-                                    );
-                                  }),
-                                ),
-                              );
-                            }),
-                          )),
-                    ),
+                    StreamBuilder(
+                        stream: selectedIndex == 0
+                            ? FirebaseFirestore.instance
+                                .collection('Resturants')
+                                .snapshots()
+                            : FirebaseFirestore.instance
+                                .collection('Resturants')
+                                .where('category',
+                                    isEqualTo: categories[selectedIndex])
+                                .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          } else if (snapshot.hasData) {
+                            var resturants = snapshot.data!.docs;
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  top: 30, left: 5, right: 5),
+                              child: SizedBox(
+                                  height: mq.height * 0.5,
+                                  width: mq.width,
+                                  child: GridView.count(
+                                    physics: const BouncingScrollPhysics(),
+                                    crossAxisCount: 2,
+                                    children: List.generate(resturants.length,
+                                        (index) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      DealsScreen(
+                                                          resturantId:
+                                                              resturants[index]
+                                                                  .id,
+                                                          location: resturants[
+                                                                  index]
+                                                              ['address'])));
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black12,
+                                                  offset: Offset(2, 2),
+                                                  blurRadius: 4,
+                                                  spreadRadius: 1,
+                                                )
+                                              ]),
+                                          margin: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 10),
+                                          child: LayoutBuilder(
+                                              builder: (context, constraints) {
+                                            var resturant = resturants[index];
+                                            return Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Container(
+                                                    height:
+                                                        constraints.maxHeight *
+                                                            0.75,
+                                                    width: constraints.maxWidth,
+                                                    decoration: BoxDecoration(
+                                                        image: DecorationImage(
+                                                            image: NetworkImage(
+                                                                resturant[
+                                                                    'img']),
+                                                            fit:
+                                                                BoxFit.cover))),
+                                                Text(
+                                                  resturant['name'],
+                                                  style: const TextStyle(
+                                                      fontSize: 15),
+                                                ),
+                                                SizedBox(
+                                                  height:
+                                                      constraints.maxHeight *
+                                                          0.001,
+                                                )
+                                              ],
+                                            );
+                                          }),
+                                        ),
+                                      );
+                                    }),
+                                  )),
+                            );
+                          }else if(!snapshot.hasData){
+                            return const Center(
+                              child: Text('No Resturants'),
+                            );
+                          } else {
+                            return const Center(
+                              child: Text('Error'),
+                            );
+                          }
+                        })
                   ],
                 );
               } else {
@@ -351,87 +467,6 @@ class CategoriesTxtRow extends StatelessWidget {
           ),
         )
       ],
-    );
-  }
-}
-
-class CategoriesCirclesWithTitles extends StatefulWidget {
-  CategoriesCirclesWithTitles({
-    super.key,
-    required this.mq,
-    required this.assetNames,
-    required this.categories,
-    required this.ind,
-  });
-
-  final Size mq;
-  final List assetNames;
-  final List<String> categories;
-  int ind;
-
-  @override
-  State<CategoriesCirclesWithTitles> createState() =>
-      _CategoriesCirclesWithTitlesState();
-}
-
-class _CategoriesCirclesWithTitlesState
-    extends State<CategoriesCirclesWithTitles> {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 30),
-      child: SizedBox(
-        height: widget.mq.height * 0.135,
-        width: widget.mq.width,
-        child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () => setState(() {
-                  widget.ind = index;
-                }),
-                child: Column(
-                  children: [
-                    Container(
-                      height: MediaQuery.of(context).size.height * 0.1,
-                      width: widget.ind == index
-                          ? MediaQuery.of(context).size.width * 0.2
-                          : MediaQuery.of(context).size.width * 0.19,
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 245, 163, 190),
-                        border: Border.all(
-                            color: widget.ind == index
-                                ? Colors.red
-                                : Colors.transparent,
-                            width: 2),
-                        image: DecorationImage(
-                            image: AssetImage(widget.assetNames[index])),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(
-                      height: 5,
-                    ),
-                    Text(
-                      widget.categories[index],
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontSize: widget.ind == index ? 13 : 12,
-                          fontWeight: widget.ind == index
-                              ? FontWeight.bold
-                              : FontWeight.w500),
-                    ),
-                  ],
-                ),
-              );
-            },
-            separatorBuilder: (context, index) {
-              return const SizedBox(
-                width: 15,
-              );
-            },
-            itemCount: widget.categories.length),
-      ),
     );
   }
 }

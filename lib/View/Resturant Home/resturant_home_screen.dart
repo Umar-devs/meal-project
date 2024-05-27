@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:meal_project/View/Resturant%20Home/Create%20Deal/create_deal.dart';
 import 'package:meal_project/View/Resturant%20Home/My%20Deals/my_deals_screen.dart';
-import 'package:meal_project/View/User%20Home%20Screen/Orders%20Screen/orders_screen.dart';
-import 'package:meal_project/View/User%20Home%20Screen/Profile/profile_screen.dart';
+import 'package:meal_project/View/Resturant%20Home/My%20Orders/my_orders.dart';
 
 class ResturantHomePage extends StatefulWidget {
   const ResturantHomePage({super.key});
@@ -14,7 +13,7 @@ class ResturantHomePage extends StatefulWidget {
 class _ResturantHomePageState extends State<ResturantHomePage> {
   int index = 1;
   final List<Widget> _widgetOptions = [
-    const OrderScreen(),
+    const ResturantOrderScreen(),
     const CreateDealScreen(),
     const MyResturantDeals(),
   ];

@@ -1,35 +1,33 @@
 import 'package:animate_do/animate_do.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:meal_project/View/User%20Home%20Screen/Resturants/order_success.dart';
-import 'package:meal_project/services/stripe_payment.dart';
+import 'package:meal_project/Core/page_transition.dart';
+import 'package:meal_project/Core/utils.dart';
+import 'package:meal_project/View/Resturant%20Home/My%20Deals/my_deals_screen.dart';
 
-class DealDetailsScreen extends StatefulWidget {
-  DealDetailsScreen(
+class DealDetailsScreenResturant extends StatefulWidget {
+  const DealDetailsScreenResturant(
       {super.key,
       required this.index,
       required this.imgUrl,
       required this.details,
+      required this.extras,
       required this.name,
       required this.price,
-      required this.id,
-      required this.location,
-      required this.rating,
-      required this.totalRatings});
+      required this.rating});
   final int index;
   final String imgUrl;
   final String details;
+  final String extras;
   final String name;
   final String price;
-  final String id;
-  final String location;
-  var rating;
-  var totalRatings;
+  final String rating;
   @override
-  State<DealDetailsScreen> createState() => _DealDetailsScreenState();
+  State<DealDetailsScreenResturant> createState() =>
+      _DealDetailsScreenResturantState();
 }
 
-class _DealDetailsScreenState extends State<DealDetailsScreen> {
+class _DealDetailsScreenResturantState
+    extends State<DealDetailsScreenResturant> {
   int _selectedValue = 1;
   @override
   Widget build(BuildContext context) {
@@ -50,7 +48,8 @@ class _DealDetailsScreenState extends State<DealDetailsScreen> {
                 top: MediaQuery.of(context).size.height * 0.05,
                 left: 20,
                 child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () => Navigator.push(
+                        context, FadeRoute(page: const MyResturantDeals())),
                     child:
                         const Icon(Icons.arrow_back_ios, color: Colors.white))),
             Positioned(
@@ -97,19 +96,25 @@ class _DealDetailsScreenState extends State<DealDetailsScreen> {
                               height: 10,
                             ),
                             RatingBar(
-                              rating: widget.rating.toStringAsFixed(1),
-                              totalRatings: widget.totalRatings.toString(),
+                              rating: widget.rating,
                             ),
                             const SizedBox(
-                              height: 20,
-                            ),
-                            DealLocation(
-                              location: widget.location,
+                              height: 10,
                             ),
                             const SizedBox(
-                              height: 20,
+                              height: 10,
                             ),
-                            const PaymentMethodTxt(),
+                            const TitleTxt(title: 'Extras'),
+                            Text(
+                              widget.extras,
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(
+                              height: 10,
+                            ),
+                            const TitleTxt(
+                              title: 'Payment Method',
+                            ),
                             const SizedBox(
                               height: 20,
                             ),
@@ -129,26 +134,9 @@ class _DealDetailsScreenState extends State<DealDetailsScreen> {
               bottom: 0,
               child: BottomPayBox(
                 mq: mq,
-                payment: '${widget.price} GBP',
+                payment: '${widget.price}£',
                 onTap: () {
-                  _selectedValue == 1
-                      ? Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => OrderSuccessScreen(
-                                    price: widget.price,
-                                    name: widget.name,
-                                    time: DateTime.now().toString(),
-                                    id: widget.id,
-                                  ))) // Close current screen by default
-                      : PaymentController().makePayment(
-                          '${widget.price}00',
-                          widget.name,
-                          DateTime.now().toString(),
-                          widget.id,
-                          FirebaseAuth.instance.currentUser!.uid,
-                          false,
-                          context);
+                  Utils().toastMessage('This is demo page of your deal');
                 },
               ),
             )
@@ -177,16 +165,17 @@ class _DealDetailsScreenState extends State<DealDetailsScreen> {
   }
 }
 
-class PaymentMethodTxt extends StatelessWidget {
-  const PaymentMethodTxt({
+class TitleTxt extends StatelessWidget {
+  const TitleTxt({
     super.key,
+    required this.title,
   });
-
+  final String title;
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'Payment Method',
-      style: TextStyle(
+    return Text(
+      title,
+      style: const TextStyle(
           color: Colors.black, fontSize: 15, fontWeight: FontWeight.w500),
     );
   }
@@ -207,13 +196,9 @@ class DealLocation extends StatelessWidget {
         const SizedBox(
           width: 5,
         ),
-        const Text(
-          'Located at: ',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        ),
         Text(
           location,
-          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
         // Default selected value
       ],
@@ -279,7 +264,7 @@ class BackgroundImg extends StatelessWidget {
   });
 
   final Size mq;
-  final DealDetailsScreen widget;
+  final DealDetailsScreenResturant widget;
   final String img;
   @override
   Widget build(BuildContext context) {
@@ -305,10 +290,8 @@ class RatingBar extends StatelessWidget {
   const RatingBar({
     super.key,
     required this.rating,
-    required this.totalRatings,
   });
   final String rating;
-  final String totalRatings;
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -321,11 +304,7 @@ class RatingBar extends StatelessWidget {
           ),
         Text(
           rating,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        ),
-        Text(
-          " ($totalRatings)",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
       ],
     );

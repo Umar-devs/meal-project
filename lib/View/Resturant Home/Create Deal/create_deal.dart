@@ -6,9 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:meal_project/Core/page_transition.dart';
+import 'package:intl/intl.dart';
 import 'package:meal_project/Core/utils.dart';
-import 'package:meal_project/View/Auth/Login%20Screen/login.dart';
 
 class CreateDealScreen extends StatefulWidget {
   const CreateDealScreen({super.key});
@@ -24,6 +23,7 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
   final detailsController = TextEditingController();
   final tableNumberController = TextEditingController();
   final tablePriceController = TextEditingController();
+  final tablePositionController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _formKeyTable = GlobalKey<FormState>();
   List<String> options = [
@@ -41,36 +41,6 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
         print('Selected image: ${_image!}');
       }
     });
-  }
-
-  Future<void> _uploadImage(img) async {
-    if (_image == null) return;
-
-    try {
-      // Create a reference to Firebase Storage
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('deals/${DateTime.now().millisecondsSinceEpoch}');
-      // Upload the file to Firebase Storage
-      final uploadTask = storageRef.putFile(_image!);
-
-      // Wait until the file is uploaded
-      await uploadTask;
-
-      // Get the download URL
-      downloadUrl = await storageRef.getDownloadURL();
-
-      // Save the download URL to Firestore
-
-      if (kDebugMode) {
-        print(
-            'File uploaded successfully...............................................');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Failed to upload file::::::::::::::::::::::::::::::::::::: $e');
-      }
-    }
   }
 
   @override
@@ -101,6 +71,9 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
                     context,
                     _formKeyTable,
                     selectedOption,
+                    tableNumberController,
+                    tablePriceController,
+                    tablePositionController,
                   );
                 },
                 child: const Text('Create Table',
@@ -160,8 +133,6 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
             extrasController: extrasController,
             priceController: priceController,
             detailsController: detailsController,
-            url: downloadUrl??'none',
-            upload: _uploadImage(_image),
           ),
         ],
       ),
@@ -172,6 +143,9 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
     BuildContext context,
     formKey,
     selectedOption,
+    TextEditingController tableNumberController,
+    TextEditingController tablePriceController,
+    TextEditingController tablePositionController,
   ) {
     showDialog(
       context: context,
@@ -182,71 +156,115 @@ class _CreateDealScreenState extends State<CreateDealScreen> {
             'Enter Credentials',
             style: TextStyle(fontSize: 18),
           )),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Number:'),
-                TxtField(
-                    hint: 'Enter Number', controller: tableNumberController),
-                const Text('Price:'),
-                TxtField(
-                  controller: tablePriceController,
-                  hint: 'Enter Price',
-                ),
-                const Text('Select Payment:'),
-                Container(
-                  padding: const EdgeInsets.all(10.0),
-                  decoration: const BoxDecoration(color: Colors.white),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Payment:',
-                        style: TextStyle(color: Colors.grey.shade500),
-                      ),
-                      DropdownButton<String>(
-                        value: selectedOption, // Currently selected value
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            selectedOption = newValue;
-                            if (kDebugMode) {
-                              print(newValue.toString());
+          content: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Number:'),
+                  TxtField(
+                      hint: 'Enter Number', controller: tableNumberController),
+                  const Text('Price/hour:'),
+                  TxtField(
+                    controller: tablePriceController,
+                    hint: 'Enter Price',
+                  ),
+                  const Text('Position:'),
+                  TxtField(
+                    controller: tablePositionController,
+                    hint: 'Enter Position',
+                  ),
+                  const Text('Select Payment:'),
+                  Container(
+                    padding: const EdgeInsets.all(10.0),
+                    decoration: const BoxDecoration(color: Colors.white),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Payment:',
+                          style: TextStyle(color: Colors.grey.shade500),
+                        ),
+                        DropdownButton<String>(
+                          value: selectedOption, // Currently selected value
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              selectedOption = newValue;
+                              if (kDebugMode) {
+                                print(newValue.toString());
+                              }
+                            });
+                          },
+                          items: options
+                              .map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(selectedOption ?? value),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton(
+                      onPressed: () {
+                        if (selectedOption == null) {
+                          Utils().toastMessage('Select Payment');
+                        } else {
+                          if (formKey.currentState!.validate()) {
+                            final currentUser =
+                                FirebaseAuth.instance.currentUser;
+                            if (currentUser != null) {
+                              String formatDateTime(DateTime dateTime) {
+                                final dateFormatter = DateFormat('dd-MM-yyyy');
+                                final timeFormatter = DateFormat('h:mm a');
+
+                                String formattedDate =
+                                    dateFormatter.format(dateTime);
+                                String formattedTime =
+                                    timeFormatter.format(dateTime);
+
+                                return '$formattedDate At $formattedTime';
+                              }
+                              var dateTime=DateTime.now();
+                              final ref = FirebaseFirestore.instance
+                                  .collection('Resturants')
+                                  .doc(currentUser.uid)
+                                  .collection('Tables')
+                                  .doc(formatDateTime(DateTime.parse(dateTime.toString())));
+                              ref.set({
+                                'number': tableNumberController.text,
+                                'price': tablePriceController.text,
+                                'position': tablePositionController.text,
+                                'paymentType': 'Advance',
+                                'status': 'available',
+                                'bookedBy': '',
+                                'time': formatDateTime(DateTime.parse(dateTime.toString())),
+                              }).then((value) {
+                                if (kDebugMode) {
+                                  print("Deal Added:${currentUser.uid}");
+                                }
+                                Utils().toastMessage('success');
+                              }).catchError((error) {
+                                if (kDebugMode) {
+                                  print("Failed to add Deal: $error");
+                                }
+                              });
                             }
-                          });
-                        },
-                        items: options
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(selectedOption ?? value),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.center,
-                  child: TextButton(
-                    onPressed: () {
-                      if (selectedOption == null) {
-                        Utils().toastMessage('Select Payment');
-                      } else {
-                        if (formKey.currentState!.validate()) {
-                          if (kDebugMode) {
-                            print('Form Submitted');
+                            Navigator.pop(context);
                           }
-                          Navigator.pop(context);
                         }
-                      }
-                    },
-                    child: const Text('Submit'),
-                  ),
-                )
-              ],
+                      },
+                      child: const Text('Submit'),
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
         );
@@ -264,8 +282,6 @@ class SubmitBtn extends StatelessWidget {
     required this.extrasController,
     required this.priceController,
     required this.detailsController,
-    required this.url,
-    required this.upload,
   }) : _formKey = formKey;
 
   final File? selectedimg;
@@ -274,37 +290,64 @@ class SubmitBtn extends StatelessWidget {
   final TextEditingController extrasController;
   final TextEditingController priceController;
   final TextEditingController detailsController;
-  final String url;
-  final Future<void> upload;
 
   @override
   Widget build(BuildContext context) {
-    Future<void> addDeal(
-        String name, String extras, String price, String details) async {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        final ref = FirebaseFirestore.instance
-            .collection('Resturants')
-            .doc(currentUser.uid)
-            .collection('Deals').doc(DateTime.now().toString());
-        return ref.set({
-          'name': name,
-          'extras': extras,
-          'price': price,
-          'details': details,
-          'dealImg': url
-        }).then((value) {
-          if (kDebugMode) {
-            print("Deal Added:${currentUser.uid}");
-          }
-          Utils().toastMessage('success');
-        }).catchError((error) {
-          if (kDebugMode) {
-            print("Failed to add Deal: $error");
-          }
-        });
+    Future<void> uploadDeal(
+        img, String name, String extras, String price, String details) async {
+      if (selectedimg == null) return;
+
+      try {
+        String? downloadUrl;
+        // Create a reference to Firebase Storage
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('deals/${DateTime.now().millisecondsSinceEpoch}');
+        // Upload the file to Firebase Storage
+        final uploadTask = storageRef.putFile(selectedimg!);
+
+        // Wait until the file is uploaded
+        await uploadTask;
+
+        // Get the download URL
+        downloadUrl = await storageRef.getDownloadURL();
+
+        // Save the download URL to Firestore
+
+        if (kDebugMode) {
+          print('File uploaded successfully..............$downloadUrl');
+        }
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          final ref = FirebaseFirestore.instance
+              .collection('Resturants')
+              .doc(currentUser.uid)
+              .collection('Deals')
+              .doc(DateTime.now().toString());
+          return ref.set({
+            'name': name,
+            'extras': extras,
+            'price': price,
+            'details': details,
+            'dealImg': downloadUrl,
+            'rating': 0,
+            'totalRatings': 0,
+          }).then((value) {
+            if (kDebugMode) {
+              print("Deal Added:${currentUser.uid}");
+            }
+            Utils().toastMessage('success');
+          }).catchError((error) {
+            if (kDebugMode) {
+              print("Failed to add Deal: $error");
+            }
+          });
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('Failed to upload file:::::::::::$e');
+        }
       }
-      // Call the user's CollectionReference to add a new user
     }
 
     return ElevatedButton(
@@ -313,11 +356,8 @@ class SubmitBtn extends StatelessWidget {
           Utils().toastMessage('Select Image');
         } else {
           if (_formKey.currentState!.validate()) {
-            upload.then((value) => addDeal(
-                nameController.text,
-                extrasController.text,
-                priceController.text,
-                detailsController.text));
+            uploadDeal(selectedimg, nameController.text, extrasController.text,
+                priceController.text, detailsController.text);
           }
         }
       },

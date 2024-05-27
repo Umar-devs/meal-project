@@ -2,7 +2,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:meal_project/View/Auth/User%20Type/user_type.dart';
 import 'package:meal_project/View/OnBoardingScreen/on_boarding.dart';
 
 Future<void> main() async {
@@ -33,6 +32,7 @@ class MyApp extends StatelessWidget {
         title: 'Flutter Demo',
         // home: UserType()
         home: OnBoardingScreen(),
+        // home: HomePage(),
         // HomePage(),
         );
   }

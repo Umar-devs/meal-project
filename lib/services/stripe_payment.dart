@@ -1,6 +1,7 @@
 import 'dart:convert';
 // ignore: avoid_web_libraries_in_flutter
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -8,10 +9,11 @@ import 'package:http/http.dart' as http;
 import 'package:meal_project/Core/utils.dart';
 import 'package:meal_project/View/User%20Home%20Screen/Resturants/order_success.dart';
 
-class PaymentController  {
+class PaymentController {
   Map<String, dynamic>? paymentIntentData;
   String payIntentId1 = 'o';
-  Future<void> makePayment(String amount,BuildContext context) async {
+  Future<void> makePayment(String amount, String name, String time, String id,String userId,
+      bool isTable, BuildContext context) async {
     try {
       Map<String, dynamic>? paymentIntent;
       paymentIntent = await createPaymentIntent(amount, 'GBP');
@@ -34,9 +36,10 @@ class PaymentController  {
           .then((value) {});
 
       // STEP 3: Display Payment sheet
-      displayPaymentSheet(context);
+      displayPaymentSheet(context, name, amount, id, time, isTable,userId);
     } catch (err) {
       Utils().toastMessage(err.toString());
+      print(err.toString());
     }
   }
 
@@ -80,10 +83,35 @@ class PaymentController  {
     }
   }
 
-  displayPaymentSheet(BuildContext context) async {
+  displayPaymentSheet(
+      BuildContext context, name, price, id, time, isTable,userId) async {
     try {
       await Stripe.instance.presentPaymentSheet().then((value) {
-       Navigator.push(context, MaterialPageRoute(builder: (context) => const OrderSuccessScreen()));
+        isTable == true
+            ? {
+                Utils()
+                    .toastMessage('Payment Successful and Table is Reserved!'),
+                    print('timeeeeeeeeeeeeeeeeee $time'),
+                FirebaseFirestore.instance
+                    .collection("Resturants")
+                    .doc(id)
+                    .collection('Tables')
+                    .doc(time)
+                    .update({
+                  'status': 'active',
+                  'bookedBy': userId,
+                }),
+                print('userId:::::::::$userId'),
+              }
+            : Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => OrderSuccessScreen(
+                          price: price,
+                          name: name,
+                          time: time,
+                          id: id,
+                        )));
         Utils().toastMessage('Payment Successful');
       });
     } catch (e) {
@@ -116,4 +144,3 @@ class PaymentController  {
     }
   }
 }
-

@@ -1,11 +1,53 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart ';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:meal_project/View/User%20Home%20Screen/home_screen.dart';
+import 'package:intl/intl.dart';
 
-class OrderSuccessScreen extends StatelessWidget {
-  const OrderSuccessScreen({super.key});
+class OrderSuccessScreen extends StatefulWidget {
+  const OrderSuccessScreen(
+      {super.key,
+      required this.price,
+      required this.name,
+      required this.time,
+      required this.id});
+  final String price;
+  final String name;
+  final String time;
+  final String id;
+
+  @override
+  State<OrderSuccessScreen> createState() => _OrderSuccessScreenState();
+}
+
+class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
+  @override
+  void initState() {
+    String formatDateTime(DateTime dateTime) {
+      final dateFormatter = DateFormat('dd-MM-yyyy');
+      final timeFormatter = DateFormat('h:mm a');
+
+      String formattedDate = dateFormatter.format(dateTime);
+      String formattedTime = timeFormatter.format(dateTime);
+
+      return '$formattedDate At $formattedTime';
+    }
+
+    FirebaseFirestore.instance.collection('Orders').doc(formatDateTime(DateTime.parse(widget.time))).set({
+      'price': widget.price,
+      'name': widget.name,
+      'time': formatDateTime(DateTime.parse(widget.time)),
+      'resId': widget.id,
+      'userId': FirebaseAuth.instance.currentUser!.uid.toString(),
+      'status': 'active',
+      'rating': 0,
+    });
+
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,36 +74,7 @@ class OrderSuccessScreen extends StatelessWidget {
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
             ),
           ),
-          SizedBox(height: mq.height * 0.025),
-// Add spacing between text and button
-          // Pink button with fixed size and centered text
-          const Text(
-            'Rate the deal:',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: mq.height * 0.01),
 
-          // Pink button with fixed size and centered text
-
-          RatingBar.builder(
-            initialRating: 4.5,
-            minRating: 1,
-            direction: Axis.horizontal,
-            allowHalfRating: true,
-            itemCount: 5,
-            itemSize: 30,
-            itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-            itemBuilder: (context, _) => const Icon(
-              Icons.star,
-              color: Colors.pink,
-              size: 15,
-            ),
-            onRatingUpdate: (rating) {
-              if (kDebugMode) {
-                print(rating);
-              }
-            },
-          ),
           SizedBox(
             height: mq.height * 0.05,
           ),

@@ -119,14 +119,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                     style: ButtonStyle(
                       fixedSize:
-                          MaterialStateProperty.all<Size>(const Size(100, 45)),
-                      shape: MaterialStateProperty.all<OutlinedBorder>(
+                          WidgetStateProperty.all<Size>(const Size(100, 45)),
+                      shape: WidgetStateProperty.all<OutlinedBorder>(
                         RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       backgroundColor:
-                          MaterialStateProperty.all<Color>(Colors.pink),
+                          WidgetStateProperty.all<Color>(Colors.pink),
                     ),
                     child: const Center(
                       child: Text(
